@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradew - Pricing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            padding: 0;
+            overflow-x: hidden;
+            /* Deep, dark navy-purple background for the pricing section */
+            background-color: #030014; 
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #5c55e6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-font {
+            font-family: 'Playfair Display', serif;
+        }
+
+        /* Subtle radial glow behind the card to match the premium SaaS vibe */
+        .glow-bg {
+            background: radial-gradient(circle at center, rgba(92, 85, 230, 0.15) 0%, rgba(3, 0, 20, 0) 70%);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative pb-20">
+
+    <header class="flex justify-between items-center px-4 py-4 md:px-8 border-b border-gray-100 bg-white sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <img src="63372413d9b4fd336ef3d0e3_6271ad37dd0dbb548de9404b_62657069b08454c39a14595a_25.png" alt="Tradew Logo" class="w-8 h-8 object-contain">
+            <span class="logo-font font-bold text-xl md:text-2xl text-[#0f172a] uppercase tracking-normal">
+                TRADE<span class="gradient-text">W</span>
+            </span>
+        </div>
+        </header>
+
+    <main class="flex-1 flex flex-col items-center pt-12 md:pt-20 px-5 text-center max-w-5xl mx-auto w-full glow-bg">
+        
+        <h1 class="text-[40px] md:text-6xl font-extrabold leading-[1.1] text-white tracking-tight">
+            Everything you<br>
+            need for<br>
+            <span class="gradient-text">consistent<br>profitability</span>
+        </h1>
+        
+        <h2 class="text-[#818cf8] text-[13px] md:text-base font-bold tracking-widest uppercase mt-8 mb-12 px-4 leading-relaxed">
+            How much will you invest in your<br>trading success today?
+        </h2>
+
+        <div class="w-full max-w-[360px] bg-[#0a0726] border-2 border-[#7e22ce] rounded-[28px] p-8 relative overflow-hidden shadow-2xl mx-auto text-left">
+            
+            <h3 class="text-white text-2xl font-bold text-center mb-6 tracking-wide">BASIC</h3>
+            
+            <div class="flex justify-center items-baseline text-white mb-8">
+                <span class="text-2xl font-semibold relative -top-6 mr-1.5">$</span>
+                <span class="text-[80px] font-bold tracking-tight leading-none">0</span>
+                <span class="text-lg ml-2 text-gray-300 font-medium">/ Lifetime</span>
+            </div>
+            
+            <button onclick="window.location.href='index.html'" class="w-full text-center py-3.5 px-4 border-2 border-[#a21caf] rounded-xl text-white font-bold hover:bg-[#a21caf]/20 transition mb-10 text-[17px]">
+                Get Started
+            </button>
+            
+            <ul class="space-y-4 text-gray-200 font-medium text-[15px]">
+                <li class="flex items-center gap-4">
+                    <i class="fa-solid fa-check text-white text-xl w-5"></i>
+                    <span>Can add unlimited accounts</span>
+                </li>
+                <li class="flex items-center gap-4">
+                    <i class="fa-solid fa-check text-white text-xl w-5"></i>
+                    <span>1 GB of secure data storage</span>
+                </li>
+                <li class="flex items-center gap-4">
+                    <i class="fa-solid fa-check text-white text-xl w-5"></i>
+                    <span>Create unlimited playbooks</span>
+                </li>
+                <li class="flex items-center gap-4">
+                    <i class="fa-solid fa-check text-white text-xl w-5"></i>
+                    <span>Advanced analytics and reports</span>
+                </li>
+                <li class="flex items-center gap-4 text-gray-500">
+                    <i class="fa-solid fa-xmark text-[22px] w-5 text-center"></i>
+                    <span>Unlimited Backtesting (coming soon)</span>
+                </li>
+            </ul>
+            
+            <div class="text-center mt-10 mb-2">
+                <a href="#" class="text-[#818cf8] hover:text-white text-[15px] font-medium transition inline-flex items-center gap-2">
+                    See full breakdown <i class="fa-solid fa-arrow-right text-xs"></i>
+                </a>
+            </div>
+        </div>
+
+    </main>
+
+    <div class="fixed bottom-6 right-6 w-14 h-14 bg-[#5c55e6] rounded-full flex items-center justify-center shadow-2xl cursor-pointer hover:scale-105 transition-transform z-50">
+        <i class="fa-solid fa-comment text-white text-[22px]"></i>
+    </div>
+
+</body>
+</html>
