@@ -51,9 +51,66 @@
         .sidebar-open { transform: translateX(0); }
         .sidebar-closed { transform: translateX(-100%); }
         @media (min-width: 768px) { .sidebar-closed { transform: translateX(0); } }
+
+        /* Image upload area */
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8fafc;
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: #4f46e5;
+            background: #eef2ff;
+        }
+        .upload-zone.drag-over {
+            transform: scale(1.01);
+        }
+        .img-preview-thumb {
+            width: 80px; height: 80px; object-fit: cover; border-radius: 8px;
+            border: 2px solid #e2e8f0; cursor: pointer; transition: all 0.15s;
+        }
+        .img-preview-thumb:hover { border-color: #4f46e5; transform: scale(1.05); }
+
+        /* Trade detail popup */
+        .trade-detail-label {
+            font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
+        }
+        .trade-detail-value {
+            font-size: 14px; font-weight: 600; color: #1e293b;
+        }
+
+        /* Fullscreen image viewer */
+        #fullscreen-viewer {
+            position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.92);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        }
+        #fullscreen-viewer.active {
+            opacity: 1; pointer-events: all;
+        }
+        #fullscreen-viewer img {
+            max-width: 92vw; max-height: 88vh; border-radius: 8px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+
+        /* Trade log row hover */
+        .tradelog-row { cursor: pointer; transition: background 0.15s; }
+        .tradelog-row:hover { background: #f1f5f9 !important; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
+
+    <!-- Fullscreen Image Viewer -->
+    <div id="fullscreen-viewer" onclick="closeFullscreenViewer()">
+        <button onclick="closeFullscreenViewer()" class="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition z-10">
+            <i class="fa-solid fa-xmark text-white text-xl"></i>
+        </button>
+        <img id="fullscreen-image" src="" alt="Screenshot" onclick="event.stopPropagation()">
+    </div>
 
     <div id="login-screen">
         <div class="login-header"><span>Tradew</span><span>2026</span></div>
@@ -67,6 +124,7 @@
 
     <div id="main-journal-page" class="hidden flex h-screen w-screen overflow-hidden relative">
         
+        <!-- Log Manual Trade Modal -->
         <div id="modal-manual" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div class="bg-white w-full max-w-3xl rounded-xl shadow-2xl p-6 transform transition-all border border-slate-200 max-h-[90vh] overflow-y-auto m-4">
                 <div class="flex justify-between items-center mb-6">
@@ -93,7 +151,149 @@
                     <div><label class="block text-xs font-bold text-slate-500 mb-1">Gross PnL</label><input type="number" step="0.01" id="calc-pnl" placeholder="0.00" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
                     <div><label class="block text-xs font-bold text-slate-500 mb-1">Commissions</label><input type="number" step="0.01" id="calc-fees" placeholder="0.00" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
                 </div>
-                <button onclick="saveManualTrade()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition">Save Execution</button>
+
+                <!-- Screenshots Upload Section -->
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Screenshots</label>
+                    <div id="upload-zone" class="upload-zone" onclick="document.getElementById('file-input').click()"
+                         ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                         ondragleave="this.classList.remove('drag-over')"
+                         ondrop="handleDrop(event)">
+                        <input type="file" id="file-input" multiple accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                        <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-2"></i>
+                        <p class="text-sm text-slate-500 font-medium">Click or drag images here</p>
+                        <p class="text-xs text-slate-400 mt-1">PNG, JPG, WEBP up to 5MB each</p>
+                    </div>
+                    <div id="image-previews" class="flex flex-wrap gap-3 mt-3"></div>
+                </div>
+
+                <button onclick="saveManualTrade()" id="save-trade-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                    <span>Save Execution</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Trade Detail Popup -->
+        <div id="modal-trade-detail" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto m-4">
+                <!-- Header -->
+                <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10 rounded-t-xl">
+                    <div class="flex items-center gap-3">
+                        <h2 id="detail-title" class="text-lg font-bold text-slate-800">Trade Details</h2>
+                        <span id="detail-side-badge" class="px-2 py-1 rounded text-xs font-bold">Long</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="enterEditMode()" id="detail-edit-btn" class="text-slate-400 hover:text-indigo-600 transition px-2 py-1 rounded-lg hover:bg-indigo-50" title="Edit Trade">
+                            <i class="fa-solid fa-pen-to-square text-base"></i>
+                        </button>
+                        <button onclick="deleteTradeFromDetail()" id="detail-delete-btn" class="text-slate-400 hover:text-red-500 transition px-2 py-1 rounded-lg hover:bg-red-50" title="Delete Trade">
+                            <i class="fa-solid fa-trash text-base"></i>
+                        </button>
+                        <button onclick="closeTradeDetail()" class="text-slate-400 hover:text-slate-700 transition px-2 py-1 rounded-lg hover:bg-slate-100">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View Mode Content -->
+                <div id="detail-view-mode" class="p-6">
+                    <!-- PnL Banner -->
+                    <div id="detail-pnl-banner" class="rounded-lg p-4 mb-6 flex items-center justify-between">
+                        <div>
+                            <div class="text-xs font-bold opacity-70 mb-1">NET P&L</div>
+                            <div id="detail-pnl" class="text-3xl font-bold">$0.00</div>
+                        </div>
+                        <div class="text-right">
+                            <div id="detail-gross-pnl" class="text-xs opacity-70">Gross: $0.00</div>
+                            <div id="detail-fees" class="text-xs opacity-70">Fees: $0.00</div>
+                        </div>
+                    </div>
+
+                    <!-- Trade Info Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <div class="trade-detail-label">Account</div>
+                            <div class="trade-detail-value" id="detail-account">-</div>
+                        </div>
+                        <div>
+                            <div class="trade-detail-label">Date</div>
+                            <div class="trade-detail-value" id="detail-date">-</div>
+                        </div>
+                        <div>
+                            <div class="trade-detail-label">Time</div>
+                            <div class="trade-detail-value" id="detail-time">-</div>
+                        </div>
+                        <div>
+                            <div class="trade-detail-label">Risk/Reward</div>
+                            <div class="trade-detail-value" id="detail-rr">-</div>
+                        </div>
+                        <div>
+                            <div class="trade-detail-label">News Event</div>
+                            <div class="trade-detail-value" id="detail-news">-</div>
+                        </div>
+                        <div>
+                            <div class="trade-detail-label">Emotions</div>
+                            <div class="trade-detail-value" id="detail-emotions">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Framework -->
+                    <div class="mb-6">
+                        <div class="trade-detail-label">Framework / Reason</div>
+                        <div class="trade-detail-value bg-slate-50 p-3 rounded-lg text-sm" id="detail-framework">-</div>
+                    </div>
+
+                    <!-- Screenshots -->
+                    <div id="detail-screenshots-section" class="hidden">
+                        <div class="trade-detail-label mb-2">Screenshots</div>
+                        <div id="detail-screenshots" class="flex flex-wrap gap-3"></div>
+                    </div>
+                </div>
+
+                <!-- Edit Mode Content -->
+                <div id="detail-edit-mode" class="hidden p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Account</label>
+                            <input list="account-suggestions" id="edit-account" class="w-full border p-2 rounded-lg text-sm bg-white outline-none">
+                        </div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Asset</label><input type="text" id="edit-asset" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Side</label><select id="edit-side" class="w-full border p-2 rounded-lg text-sm bg-white outline-none"><option>Long</option><option>Short</option></select></div>
+                        
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Entry Date</label><input type="date" id="edit-date" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Entry Time</label><input type="time" id="edit-time" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">RR</label><input type="text" id="edit-rr" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+                        
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">News Event</label><input type="text" id="edit-news" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Emotions</label><input type="text" id="edit-emotions" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+                        <div class="md:col-span-1"><label class="block text-xs font-bold text-slate-500 mb-1">Framework/Reason</label><input type="text" id="edit-framework" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Gross PnL</label><input type="number" step="0.01" id="edit-pnl" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">Commissions</label><input type="number" step="0.01" id="edit-fees" class="w-full border p-2 rounded-lg text-sm outline-none"></div>
+                    </div>
+
+                    <!-- Edit Screenshots -->
+                    <div class="mb-6">
+                        <label class="block text-xs font-bold text-slate-500 mb-2">Screenshots</label>
+                        <div id="edit-existing-images" class="flex flex-wrap gap-3 mb-3"></div>
+                        <div id="edit-upload-zone" class="upload-zone" onclick="document.getElementById('edit-file-input').click()"
+                             ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                             ondragleave="this.classList.remove('drag-over')"
+                             ondrop="handleEditDrop(event)">
+                            <input type="file" id="edit-file-input" multiple accept="image/*" class="hidden" onchange="handleEditFileSelect(event)">
+                            <i class="fa-solid fa-cloud-arrow-up text-xl text-slate-400 mb-1"></i>
+                            <p class="text-sm text-slate-500 font-medium">Add more screenshots</p>
+                        </div>
+                        <div id="edit-new-previews" class="flex flex-wrap gap-3 mt-3"></div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="cancelEditMode()" class="flex-1 border border-slate-300 text-slate-700 py-3 rounded-lg font-bold hover:bg-slate-50 transition">Cancel</button>
+                        <button onclick="saveEditTrade()" id="save-edit-btn" class="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -278,7 +478,7 @@
                                     <th class="py-3 px-4">Emotions</th>
                                     <th class="py-3 px-4">Framework</th>
                                     <th class="py-3 px-4 text-right">Net PnL</th>
-                                    <th class="py-3 px-4 text-center">Action</th>
+                                    <th class="py-3 px-4 text-center"><i class="fa-solid fa-image text-slate-400"></i></th>
                                 </tr>
                             </thead>
                             <tbody id="full-tradelog-body" class="divide-y divide-slate-100 bg-white">
@@ -293,8 +493,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyDcPMNZPoZcsIdz0rrgfbptzCj1xnj5K-U",
@@ -308,11 +509,18 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        const storage = getStorage(app);
         const provider = new GoogleAuthProvider();
 
         let currentUser = null;
         let unsubscribe = null;
+        let pendingImages = []; // For new trade modal
+        let editNewImages = []; // For edit mode new images
+        let editRemovedUrls = []; // URLs to remove during edit
+        let currentDetailTrade = null; // Currently viewed trade
+        let allTradesMap = {}; // Map of trade id -> trade data
 
+        // ===== SIDEBAR & NAVIGATION =====
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
@@ -348,19 +556,360 @@
             if(window.innerWidth < 768) { toggleSidebar(); }
         };
 
-        window.openManualModal = () => document.getElementById('modal-manual').classList.remove('hidden');
+        // ===== MANUAL MODAL =====
+        window.openManualModal = () => {
+            pendingImages = [];
+            document.getElementById('image-previews').innerHTML = '';
+            document.getElementById('modal-manual').classList.remove('hidden');
+        };
         window.closeManualModal = () => { 
             document.getElementById('modal-manual').classList.add('hidden'); 
             const inputs = ['asset','entry-date','entry-time','rr','news','framework','emotions','calc-pnl','calc-fees'];
             inputs.forEach(id => document.getElementById(id).value = '');
+            pendingImages = [];
+            document.getElementById('image-previews').innerHTML = '';
         };
 
-        window.login = () => signInWithPopup(auth, provider).catch(err => alert("Login failed: " + err.message));
-        window.logout = () => signOut(auth).then(() => location.reload());
+        // ===== IMAGE UPLOAD HANDLERS (New Trade) =====
+        window.handleFileSelect = function(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(f => addPendingImage(f));
+            event.target.value = '';
+        };
 
+        window.handleDrop = function(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            files.forEach(f => addPendingImage(f));
+        };
+
+        function addPendingImage(file) {
+            if (file.size > 5 * 1024 * 1024) { alert("File too large. Max 5MB."); return; }
+            pendingImages.push(file);
+            renderPendingPreviews();
+        }
+
+        function renderPendingPreviews() {
+            const container = document.getElementById('image-previews');
+            container.innerHTML = '';
+            pendingImages.forEach((file, idx) => {
+                const url = URL.createObjectURL(file);
+                const div = document.createElement('div');
+                div.className = 'relative group';
+                div.innerHTML = `
+                    <img src="${url}" class="img-preview-thumb" alt="Preview" onclick="openFullscreen('${url}')">
+                    <button onclick="removePendingImage(${idx})" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md">
+                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.removePendingImage = function(idx) {
+            pendingImages.splice(idx, 1);
+            renderPendingPreviews();
+        };
+
+        // ===== IMAGE UPLOAD HANDLERS (Edit Mode) =====
+        window.handleEditFileSelect = function(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(f => addEditNewImage(f));
+            event.target.value = '';
+        };
+
+        window.handleEditDrop = function(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            files.forEach(f => addEditNewImage(f));
+        };
+
+        function addEditNewImage(file) {
+            if (file.size > 5 * 1024 * 1024) { alert("File too large. Max 5MB."); return; }
+            editNewImages.push(file);
+            renderEditNewPreviews();
+        }
+
+        function renderEditNewPreviews() {
+            const container = document.getElementById('edit-new-previews');
+            container.innerHTML = '';
+            editNewImages.forEach((file, idx) => {
+                const url = URL.createObjectURL(file);
+                const div = document.createElement('div');
+                div.className = 'relative group';
+                div.innerHTML = `
+                    <img src="${url}" class="img-preview-thumb" alt="Preview">
+                    <button onclick="removeEditNewImage(${idx})" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md">
+                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.removeEditNewImage = function(idx) {
+            editNewImages.splice(idx, 1);
+            renderEditNewPreviews();
+        };
+
+        // ===== UPLOAD IMAGES TO FIREBASE STORAGE =====
+        async function uploadImages(files) {
+            const urls = [];
+            for (const file of files) {
+                const path = `trades/${currentUser.uid}/${Date.now()}_${file.name}`;
+                const storageRef = ref(storage, path);
+                await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(storageRef);
+                urls.push({ url, path });
+            }
+            return urls;
+        }
+
+        // ===== FULLSCREEN IMAGE VIEWER =====
+        window.openFullscreen = function(url) {
+            const viewer = document.getElementById('fullscreen-viewer');
+            document.getElementById('fullscreen-image').src = url;
+            viewer.classList.add('active');
+        };
+
+        window.closeFullscreenViewer = function() {
+            const viewer = document.getElementById('fullscreen-viewer');
+            viewer.classList.remove('active');
+            document.getElementById('fullscreen-image').src = '';
+        };
+
+        // Close fullscreen on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (document.getElementById('fullscreen-viewer').classList.contains('active')) {
+                    closeFullscreenViewer();
+                }
+            }
+        });
+
+        // ===== TRADE DETAIL POPUP =====
+        window.openTradeDetail = function(tradeId) {
+            const trade = allTradesMap[tradeId];
+            if (!trade) return;
+            currentDetailTrade = trade;
+
+            // Set header
+            document.getElementById('detail-title').innerText = trade.asset || 'Trade Details';
+            const badge = document.getElementById('detail-side-badge');
+            if (trade.side === 'Long') {
+                badge.className = 'bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold';
+                badge.innerText = 'Long';
+            } else {
+                badge.className = 'bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold';
+                badge.innerText = 'Short';
+            }
+
+            // PnL banner
+            const banner = document.getElementById('detail-pnl-banner');
+            if (trade.net >= 0) {
+                banner.className = 'rounded-lg p-4 mb-6 flex items-center justify-between bg-emerald-50 border border-emerald-200';
+                document.getElementById('detail-pnl').className = 'text-3xl font-bold text-emerald-600';
+            } else {
+                banner.className = 'rounded-lg p-4 mb-6 flex items-center justify-between bg-red-50 border border-red-200';
+                document.getElementById('detail-pnl').className = 'text-3xl font-bold text-red-500';
+            }
+            document.getElementById('detail-pnl').innerText = `${trade.net >= 0 ? '+' : ''}$${trade.net.toFixed(2)}`;
+            document.getElementById('detail-gross-pnl').innerText = `Gross: $${(trade.gross || 0).toFixed(2)}`;
+            document.getElementById('detail-fees').innerText = `Fees: $${(trade.fees || 0).toFixed(2)}`;
+
+            // Info grid
+            document.getElementById('detail-account').innerText = trade.account || '-';
+            document.getElementById('detail-date').innerText = trade.date || '-';
+            document.getElementById('detail-time').innerText = trade.time || '-';
+            document.getElementById('detail-rr').innerText = trade.rr || '-';
+            document.getElementById('detail-news').innerText = trade.news || '-';
+            document.getElementById('detail-emotions').innerText = trade.emotions || '-';
+            document.getElementById('detail-framework').innerText = trade.framework || '-';
+
+            // Screenshots
+            const screenshotsSection = document.getElementById('detail-screenshots-section');
+            const screenshotsContainer = document.getElementById('detail-screenshots');
+            screenshotsContainer.innerHTML = '';
+            const images = trade.images || [];
+            if (images.length > 0) {
+                screenshotsSection.classList.remove('hidden');
+                images.forEach(img => {
+                    const imgEl = document.createElement('img');
+                    imgEl.src = img.url;
+                    imgEl.alt = 'Trade screenshot';
+                    imgEl.className = 'img-preview-thumb w-24 h-24';
+                    imgEl.onclick = () => openFullscreen(img.url);
+                    screenshotsContainer.appendChild(imgEl);
+                });
+            } else {
+                screenshotsSection.classList.add('hidden');
+            }
+
+            // Show view mode, hide edit mode
+            document.getElementById('detail-view-mode').classList.remove('hidden');
+            document.getElementById('detail-edit-mode').classList.add('hidden');
+            document.getElementById('detail-edit-btn').classList.remove('hidden');
+            document.getElementById('detail-delete-btn').classList.remove('hidden');
+
+            document.getElementById('modal-trade-detail').classList.remove('hidden');
+        };
+
+        window.closeTradeDetail = function() {
+            document.getElementById('modal-trade-detail').classList.add('hidden');
+            currentDetailTrade = null;
+        };
+
+        // ===== DELETE FROM DETAIL =====
+        window.deleteTradeFromDetail = async function() {
+            if (!currentDetailTrade) return;
+            if (!confirm("Are you sure you want to delete this trade?")) return;
+            
+            try {
+                // Delete images from storage
+                const images = currentDetailTrade.images || [];
+                for (const img of images) {
+                    if (img.path) {
+                        try { await deleteObject(ref(storage, img.path)); } catch(e) {}
+                    }
+                }
+                await deleteDoc(doc(db, 'trades', currentDetailTrade.id));
+                closeTradeDetail();
+            } catch(e) { alert("Error deleting: " + e.message); }
+        };
+
+        // ===== EDIT MODE =====
+        window.enterEditMode = function() {
+            if (!currentDetailTrade) return;
+            const t = currentDetailTrade;
+
+            // Fill edit fields
+            document.getElementById('edit-account').value = t.account || '';
+            document.getElementById('edit-asset').value = t.asset || '';
+            document.getElementById('edit-side').value = t.side || 'Long';
+            document.getElementById('edit-date').value = t.date || '';
+            document.getElementById('edit-time').value = t.time || '';
+            document.getElementById('edit-rr').value = t.rr || '';
+            document.getElementById('edit-news').value = t.news || '';
+            document.getElementById('edit-emotions').value = t.emotions || '';
+            document.getElementById('edit-framework').value = t.framework || '';
+            document.getElementById('edit-pnl').value = t.gross || 0;
+            document.getElementById('edit-fees').value = t.fees || 0;
+
+            // Show existing images
+            editRemovedUrls = [];
+            editNewImages = [];
+            const existingContainer = document.getElementById('edit-existing-images');
+            existingContainer.innerHTML = '';
+            document.getElementById('edit-new-previews').innerHTML = '';
+
+            const images = t.images || [];
+            images.forEach((img, idx) => {
+                const div = document.createElement('div');
+                div.className = 'relative group';
+                div.id = `edit-existing-${idx}`;
+                div.innerHTML = `
+                    <img src="${img.url}" class="img-preview-thumb" alt="Screenshot">
+                    <button onclick="removeExistingImage(${idx})" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md">
+                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                    </button>
+                `;
+                existingContainer.appendChild(div);
+            });
+
+            // Toggle modes
+            document.getElementById('detail-view-mode').classList.add('hidden');
+            document.getElementById('detail-edit-mode').classList.remove('hidden');
+            document.getElementById('detail-edit-btn').classList.add('hidden');
+            document.getElementById('detail-delete-btn').classList.add('hidden');
+        };
+
+        window.removeExistingImage = function(idx) {
+            const images = currentDetailTrade.images || [];
+            if (images[idx]) {
+                editRemovedUrls.push(images[idx]);
+                const el = document.getElementById(`edit-existing-${idx}`);
+                if (el) el.remove();
+            }
+        };
+
+        window.cancelEditMode = function() {
+            editNewImages = [];
+            editRemovedUrls = [];
+            document.getElementById('detail-view-mode').classList.remove('hidden');
+            document.getElementById('detail-edit-mode').classList.add('hidden');
+            document.getElementById('detail-edit-btn').classList.remove('hidden');
+            document.getElementById('detail-delete-btn').classList.remove('hidden');
+        };
+
+        window.saveEditTrade = async function() {
+            if (!currentDetailTrade) return;
+            const btn = document.getElementById('save-edit-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>';
+            btn.disabled = true;
+
+            try {
+                const account = document.getElementById('edit-account').value || 'Main Account';
+                const asset = document.getElementById('edit-asset').value || 'N/A';
+                const date = document.getElementById('edit-date').value;
+                const time = document.getElementById('edit-time').value || '';
+                const rr = document.getElementById('edit-rr').value || '';
+                const news = document.getElementById('edit-news').value || '';
+                const emotions = document.getElementById('edit-emotions').value || '';
+                const framework = document.getElementById('edit-framework').value || '';
+                const side = document.getElementById('edit-side').value;
+                const gross = parseFloat(document.getElementById('edit-pnl').value) || 0;
+                const fees = parseFloat(document.getElementById('edit-fees').value) || 0;
+                const net = gross - fees;
+
+                if (!date) { alert("Date required."); btn.innerHTML = '<span>Save Changes</span>'; btn.disabled = false; return; }
+
+                // Remove deleted images from storage
+                for (const img of editRemovedUrls) {
+                    if (img.path) {
+                        try { await deleteObject(ref(storage, img.path)); } catch(e) {}
+                    }
+                }
+
+                // Keep remaining existing images
+                let existingImages = (currentDetailTrade.images || []).filter(img => !editRemovedUrls.includes(img));
+
+                // Upload new images
+                let newUploaded = [];
+                if (editNewImages.length > 0) {
+                    newUploaded = await uploadImages(editNewImages);
+                }
+
+                const allImages = [...existingImages, ...newUploaded];
+
+                await updateDoc(doc(db, 'trades', currentDetailTrade.id), {
+                    account, asset, date, time, rr, news, emotions, framework, side, gross, fees, net, images: allImages
+                });
+
+                closeTradeDetail();
+            } catch(e) {
+                alert("Error saving: " + e.message);
+            } finally {
+                btn.innerHTML = '<span>Save Changes</span>';
+                btn.disabled = false;
+            }
+        };
+
+        // ===== LEGACY DELETE (keep for backward compat) =====
         window.deleteTrade = async function(id) {
             if(confirm("Are you sure you want to delete this execution?")) {
-                try { await deleteDoc(doc(db, 'trades', id)); } catch(e) { alert("Error deleting: " + e.message); }
+                try {
+                    const trade = allTradesMap[id];
+                    if (trade && trade.images) {
+                        for (const img of trade.images) {
+                            if (img.path) {
+                                try { await deleteObject(ref(storage, img.path)); } catch(e) {}
+                            }
+                        }
+                    }
+                    await deleteDoc(doc(db, 'trades', id));
+                } catch(e) { alert("Error deleting: " + e.message); }
             }
         };
 
@@ -375,6 +924,10 @@
                 icon.classList.remove('rotate-90');
             }
         };
+
+        // ===== AUTH =====
+        window.login = () => signInWithPopup(auth, provider).catch(err => alert("Login failed: " + err.message));
+        window.logout = () => signOut(auth).then(() => location.reload());
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -391,6 +944,7 @@
             }
         });
 
+        // ===== CHARTS =====
         Chart.defaults.font.family = 'Inter';
         Chart.defaults.color = '#94a3b8';
         
@@ -454,6 +1008,7 @@
             } 
         });
 
+        // ===== SYNC DATA =====
         window.syncData = function() {
             if (!currentUser) return;
             if (unsubscribe) unsubscribe();
@@ -474,9 +1029,11 @@
                 let tradesArr = [];
                 let accountSet = new Set(["Main Account", "Funded Topstep", "Challenge FTMO"]);
 
-                snapshot.forEach(doc => {
-                    const t = doc.data();
-                    t.id = doc.id;
+                allTradesMap = {};
+                snapshot.forEach(d => {
+                    const t = d.data();
+                    t.id = d.id;
+                    allTradesMap[t.id] = t;
                     accountSet.add(t.account);
                     if (selectedAccount === 'All Accounts' || t.account === selectedAccount) tradesArr.push(t);
                 });
@@ -512,15 +1069,16 @@
                 [...tradesArr].reverse().forEach(t => {
                     const netClass = t.net >= 0 ? 'text-win' : 'text-loss';
                     const sideHtml = t.side === 'Long' ? '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium">Long</span>' : '<span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-medium">Short</span>';
+                    const hasImages = (t.images && t.images.length > 0);
                     
                     if (recentCounter < 15 && recentBody) {
-                        recentBody.insertAdjacentHTML('beforeend', `<tr><td class="py-2 pl-2 text-slate-500">${t.date}</td><td class="py-2 font-medium">${t.asset}</td><td class="py-2 text-right pr-2 font-bold ${netClass}">${t.net >= 0 ? '+' : ''}$${t.net.toFixed(2)}</td></tr>`);
+                        recentBody.insertAdjacentHTML('beforeend', `<tr class="tradelog-row" onclick="openTradeDetail('${t.id}')"><td class="py-2 pl-2 text-slate-500">${t.date}</td><td class="py-2 font-medium">${t.asset}</td><td class="py-2 text-right pr-2 font-bold ${netClass}">${t.net >= 0 ? '+' : ''}$${t.net.toFixed(2)}</td></tr>`);
                         recentCounter++;
                     }
 
                     const dispTime = t.time || '-'; const dispRR = t.rr || '-'; const dispNews = t.news || '-'; const dispEmo = t.emotions || '-'; const dispFrame = t.framework || '-';
                     if (fullLogBody) {
-                        fullLogBody.insertAdjacentHTML('beforeend', `<tr><td class="py-3 px-4 text-slate-500">${t.account}</td><td class="py-3 px-4 text-slate-500">${t.date}</td><td class="py-3 px-4 text-slate-500">${dispTime}</td><td class="py-3 px-4 font-bold text-slate-900">${t.asset}</td><td class="py-3 px-4">${sideHtml}</td><td class="py-3 px-4 text-slate-500">${dispRR}</td><td class="py-3 px-4 text-slate-500">${dispNews}</td><td class="py-3 px-4 text-slate-500">${dispEmo}</td><td class="py-3 px-4 text-slate-500 truncate max-w-[150px]" title="${dispFrame}">${dispFrame}</td><td class="py-3 px-4 text-right font-bold ${netClass}">${t.net >= 0 ? '+' : ''}$${t.net.toFixed(2)}</td><td class="py-3 px-4 text-center"><button onclick="deleteTrade('${t.id}')" class="text-red-400 hover:text-red-600 transition"><i class="fa-solid fa-trash"></i></button></td></tr>`);
+                        fullLogBody.insertAdjacentHTML('beforeend', `<tr class="tradelog-row" onclick="openTradeDetail('${t.id}')"><td class="py-3 px-4 text-slate-500">${t.account}</td><td class="py-3 px-4 text-slate-500">${t.date}</td><td class="py-3 px-4 text-slate-500">${dispTime}</td><td class="py-3 px-4 font-bold text-slate-900">${t.asset}</td><td class="py-3 px-4">${sideHtml}</td><td class="py-3 px-4 text-slate-500">${dispRR}</td><td class="py-3 px-4 text-slate-500">${dispNews}</td><td class="py-3 px-4 text-slate-500">${dispEmo}</td><td class="py-3 px-4 text-slate-500 truncate max-w-[150px]" title="${dispFrame}">${dispFrame}</td><td class="py-3 px-4 text-right font-bold ${netClass}">${t.net >= 0 ? '+' : ''}$${t.net.toFixed(2)}</td><td class="py-3 px-4 text-center">${hasImages ? '<i class="fa-solid fa-image text-indigo-400"></i>' : '<span class="text-slate-300">-</span>'}</td></tr>`);
                     }
                 });
 
@@ -585,6 +1143,7 @@
             });
         };
 
+        // ===== CALENDAR =====
         function buildCalendar(dailyData) {
             const grid = document.getElementById('calendar-grid'); grid.innerHTML = '';
             const today = new Date(); const year = today.getFullYear(); const month = today.getMonth();
@@ -649,6 +1208,7 @@
             }
         }
 
+        // ===== DAILY JOURNAL =====
         function buildDailyJournal(dailyData) {
             const list = document.getElementById('daily-journal-list');
             list.innerHTML = '';
@@ -672,15 +1232,17 @@
                 data.trades.forEach(t => {
                     const tNetClass = t.net >= 0 ? 'text-emerald-500' : 'text-red-500';
                     const sideHtml = t.side === 'Long' ? '<span class="text-xs font-bold text-slate-700">LONG</span>' : '<span class="text-xs font-bold text-slate-700">SHORT</span>';
+                    const hasImgs = (t.images && t.images.length > 0);
                     tradesHtml += `
-                        <tr class="hover:bg-slate-50 transition border-b border-slate-50 last:border-0">
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-50 last:border-0 tradelog-row" onclick="openTradeDetail('${t.id}')">
                             <td class="py-3 px-4 text-xs text-slate-500">${t.time || '-'}</td>
                             <td class="py-3 px-4 text-xs font-bold text-slate-800">${t.asset}</td>
                             <td class="py-3 px-4 text-xs">${sideHtml}</td>
                             <td class="py-3 px-4 text-xs font-bold ${tNetClass}">${t.net >= 0 ? '+' : ''}$${t.net.toFixed(2)}</td>
-                            <td class="py-3 px-4 text-xs text-slate-500">${t.qty}</td>
+                            <td class="py-3 px-4 text-xs text-slate-500">${t.qty || '-'}</td>
                             <td class="py-3 px-4 text-xs text-slate-500">${t.rr || '-'}</td>
                             <td class="py-3 px-4 text-xs text-slate-500 truncate max-w-[150px]" title="${t.framework || '-'}">${t.framework || '-'}</td>
+                            <td class="py-3 px-4 text-xs text-center">${hasImgs ? '<i class="fa-solid fa-image text-indigo-400"></i>' : ''}</td>
                         </tr>
                     `;
                 });
@@ -690,7 +1252,7 @@
                     <div class="px-6 py-4 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition border-b border-slate-100" onclick="toggleDailyDay('day-${dateStr}')">
                         <i class="fa-solid fa-chevron-right text-slate-400 text-xs transition-transform duration-200" id="icon-day-${dateStr}"></i>
                         <span class="font-bold text-slate-800 text-sm">${formattedDate}</span>
-                        <span class="text-slate-300">•</span>
+                        <span class="text-slate-300">&bull;</span>
                         <span class="font-bold ${netClass} text-sm">Net P&L ${netSign}$${Math.abs(data.net).toFixed(2)}</span>
                     </div>
                     
@@ -730,6 +1292,7 @@
                                         <th class="py-3 px-4 text-xs font-semibold">Volume</th>
                                         <th class="py-3 px-4 text-xs font-semibold">RR</th>
                                         <th class="py-3 px-4 text-xs font-semibold">Notes</th>
+                                        <th class="py-3 px-4 text-xs font-semibold text-center"><i class="fa-solid fa-image text-slate-400"></i></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -744,6 +1307,7 @@
             });
         }
 
+        // ===== DASHBOARD DAILY WIDGET =====
         function buildDashboardDailyWidget(dailyData) {
             const widget = document.getElementById('dashboard-daily-widget');
             if(!widget) return;
@@ -830,6 +1394,7 @@
             `;
         }
 
+        // ===== SPARKLINE =====
         function generateSparkline(trades) {
             if (!trades || trades.length === 0) return '';
             let sorted = [...trades].sort((a,b) => a.timestamp - b.timestamp);
@@ -891,29 +1456,44 @@
             `;
         }
 
+        // ===== SAVE NEW TRADE =====
         window.saveManualTrade = async function() {
             if (!currentUser) return; 
-            const account = document.getElementById('trade-account').value || 'Main Account';
-            const asset = document.getElementById('asset').value || 'N/A';
-            const date = document.getElementById('entry-date').value;
-            const time = document.getElementById('entry-time').value || '';
-            const rr = document.getElementById('rr').value || '';
-            const news = document.getElementById('news').value || '';
-            const emotions = document.getElementById('emotions').value || '';
-            const framework = document.getElementById('framework').value || '';
-            const side = document.getElementById('side').value;
-            const gross = parseFloat(document.getElementById('calc-pnl').value) || 0;
-            const fees = parseFloat(document.getElementById('calc-fees').value) || 0;
-            const net = gross - fees;
-
-            if(!date) return alert("Date required to log execution.");
+            const btn = document.getElementById('save-trade-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>';
+            btn.disabled = true;
 
             try {
+                const account = document.getElementById('trade-account').value || 'Main Account';
+                const asset = document.getElementById('asset').value || 'N/A';
+                const date = document.getElementById('entry-date').value;
+                const time = document.getElementById('entry-time').value || '';
+                const rr = document.getElementById('rr').value || '';
+                const news = document.getElementById('news').value || '';
+                const emotions = document.getElementById('emotions').value || '';
+                const framework = document.getElementById('framework').value || '';
+                const side = document.getElementById('side').value;
+                const gross = parseFloat(document.getElementById('calc-pnl').value) || 0;
+                const fees = parseFloat(document.getElementById('calc-fees').value) || 0;
+                const net = gross - fees;
+
+                if(!date) { alert("Date required to log execution."); btn.innerHTML = '<span>Save Execution</span>'; btn.disabled = false; return; }
+
+                // Upload images
+                let images = [];
+                if (pendingImages.length > 0) {
+                    images = await uploadImages(pendingImages);
+                }
+
                 await addDoc(collection(db, 'trades'), {
-                    uid: currentUser.uid, account, asset, date, time, rr, news, emotions, framework, side, gross, fees, net, timestamp: Date.now()
+                    uid: currentUser.uid, account, asset, date, time, rr, news, emotions, framework, side, gross, fees, net, timestamp: Date.now(), images
                 });
                 closeManualModal();
             } catch (e) { alert("Error: " + e.message); }
+            finally {
+                btn.innerHTML = '<span>Save Execution</span>';
+                btn.disabled = false;
+            }
         };
 
     </script>
