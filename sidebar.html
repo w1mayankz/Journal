@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sidebar Component</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-[#f4f5f8] flex h-screen">
+
+    <aside class="w-16 h-full bg-gradient-to-b from-[#161627] to-[#1e1d3b] flex flex-col items-center py-6 shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.05)] border-r border-[#2d2c4e]">
+        
+        <div class="mb-8 w-8 h-8 rounded-full overflow-hidden border border-[#3f3e66] shadow-md shrink-0">
+            <img src="63372413d9b4fd336ef3d0e3_6271ad37dd0dbb548de9404b_62657069b08454c39a14595a_25.png" alt="Bull Logo" class="w-full h-full object-cover bg-slate-800">
+        </div>
+
+        <div class="w-10 h-10 bg-gradient-to-r from-[#7c3aed] to-[#6366f1] rounded-xl flex items-center justify-center text-white cursor-pointer hover:opacity-90 hover:scale-105 transition-all shadow-lg mb-6 shrink-0">
+            <i class="fa-solid fa-plus text-[15px]"></i>
+        </div>
+
+        <nav class="w-full flex flex-col gap-1">
+            
+            <a href="dashboard.html" class="w-full relative flex justify-center items-center py-3.5 cursor-pointer group hover:bg-white/5 transition-colors">
+                <i class="fa-solid fa-border-all text-[#64748b] group-hover:text-white transition-colors text-[18px]"></i>
+            </a>
+
+            <a href="trades.html" class="w-full relative flex justify-center items-center py-3.5 cursor-pointer group hover:bg-white/5 transition-colors">
+                <i class="fa-solid fa-chart-column text-[#64748b] group-hover:text-white transition-colors text-[18px]"></i>
+            </a>
+
+        </nav>
+
+        <div class="mt-auto flex flex-col items-center gap-6">
+            
+            <button onclick="handleSignOut()" class="text-[#64748b] hover:text-red-400 transition-colors cursor-pointer outline-none">
+                <i class="fa-solid fa-right-from-bracket text-[18px]"></i>
+            </button>
+
+            <div class="w-8 h-8 rounded-full bg-[#2a2947] border border-[#3f3e66] flex items-center justify-center text-[#8b949e] cursor-pointer hover:text-white transition-colors shrink-0">
+                <i class="fa-solid fa-user text-[11px]"></i>
+            </div>
+        </div>
+
+    </aside>
+
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // Your Firebase config (Make sure this matches your index.html config)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Global function so the button can see it
+        window.handleSignOut = () => {
+            signOut(auth).then(() => {
+                // Sign-out successful, redirect to landing page
+                window.location.href = 'index.html';
+            }).catch((error) => {
+                console.error("Sign out error:", error);
+            });
+        };
+    </script>
+
+</body>
+</html>
