@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradew - Light Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f4f5f8; }
+        
+        .fade-in { animation: fadeIn 0.15s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Clean Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .widget-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .gauge-container { position: relative; width: 80px; height: 40px; }
+        .gauge-circle { position: relative; width: 50px; height: 50px; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-slate-800">
+
+    <aside class="w-16 h-full bg-gradient-to-b from-[#161627] to-[#1e1d3b] flex flex-col items-center py-6 shrink-0 z-20 border-r border-[#2d2c4e]">
+        <div class="mb-8 w-8 h-8 rounded-full bg-indigo-500 overflow-hidden border border-[#3f3e66] flex items-center justify-center text-white font-bold text-xs shadow-md">
+            TR
+        </div>
+        <div class="w-10 h-10 bg-gradient-to-r from-[#7c3aed] to-[#6366f1] rounded-xl flex items-center justify-center text-white cursor-pointer hover:opacity-90 shadow-lg mb-6 shrink-0">
+            <i class="fa-solid fa-plus text-[15px]"></i>
+        </div>
+        <nav class="w-full flex flex-col gap-1">
+            <a href="#" class="w-full relative flex justify-center items-center py-3.5 cursor-pointer bg-white/5">
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#8b5cf6] rounded-r-md"></div>
+                <i class="fa-solid fa-border-all text-white text-[18px]"></i>
+            </a>
+            <a href="#" class="w-full relative flex justify-center items-center py-3.5 cursor-pointer group hover:bg-white/5 transition-colors">
+                <i class="fa-solid fa-chart-column text-[#64748b] group-hover:text-white transition-colors text-[18px]"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full overflow-y-auto overflow-x-hidden relative z-10 p-4 md:p-6 gap-5">
+        
+        <header class="flex justify-between items-center shrink-0 mb-1">
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-semibold text-slate-400">Last import: Mar 06, 2026 08:41 AM</span>
+                <span class="text-xs font-semibold text-indigo-500 cursor-pointer hover:underline">Resync</span>
+            </div>
+            <div class="flex gap-3">
+                <button class="h-9 px-4 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm hover:bg-indigo-700 transition gap-2">
+                    <i class="fa-solid fa-rocket text-xs"></i> Start my day
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-5 gap-4 shrink-0">
+            
+            <div class="widget-card justify-between">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                        Net P&L <i class="fa-solid fa-circle-info opacity-50 cursor-pointer"></i>
+                        <span class="ml-1 px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded text-[9px]">59</span>
+                    </div>
+                    <div class="w-6 h-6 rounded bg-indigo-50 text-indigo-500 flex items-center justify-center text-[10px]"><i class="fa-solid fa-wallet"></i></div>
+                </div>
+                <div class="text-2xl font-bold text-[#10b981]">$8,411.5</div>
+            </div>
+
+            <div class="widget-card justify-between relative overflow-hidden">
+                <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                    Trade win % <i class="fa-solid fa-circle-info opacity-50 cursor-pointer"></i>
+                </div>
+                <div class="flex justify-between items-end">
+                    <div class="text-2xl font-bold text-slate-800">74.58%</div>
+                    <div class="gauge-container -mb-2">
+                        <canvas id="gaugeWinPct"></canvas>
+                        <div class="absolute bottom-0 w-full flex justify-between text-[9px] font-bold text-slate-400 px-1">
+                            <span class="text-[#10b981]">44</span><span>0</span><span class="text-[#ef4444]">15</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="widget-card justify-between">
+                <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                    Profit factor <i class="fa-solid fa-circle-info opacity-50 cursor-pointer"></i>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="text-2xl font-bold text-slate-800">2.19</div>
+                    <div class="gauge-circle">
+                        <canvas id="gaugeProfitFactor"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="widget-card justify-between relative overflow-hidden">
+                <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                    Day win % <i class="fa-solid fa-circle-info opacity-50 cursor-pointer"></i>
+                </div>
+                <div class="flex justify-between items-end">
+                    <div class="text-2xl font-bold text-slate-800">100%</div>
+                    <div class="gauge-container -mb-2">
+                        <canvas id="gaugeDayWin"></canvas>
+                        <div class="absolute bottom-0 w-full flex justify-between text-[9px] font-bold text-slate-400 px-1">
+                            <span class="text-[#10b981]">7</span><span>0</span><span class="text-[#ef4444]">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="widget-card justify-between">
+                <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">
+                    Avg win/loss trade <i class="fa-solid fa-circle-info opacity-50 cursor-pointer"></i>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-2xl font-bold text-slate-800">0.75</div>
+                    <div class="flex-1 flex flex-col">
+                        <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-slate-100">
+                            <div class="bg-[#10b981]" style="width: 42%;"></div>
+                            <div class="w-0.5 bg-white"></div>
+                            <div class="bg-[#ef4444]" style="width: 58%;"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-bold mt-1">
+                            <span class="text-[#10b981]">$352</span>
+                            <span class="text-[#ef4444]">-$473</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="grid grid-cols-3 gap-5 shrink-0 h-[340px]">
+            
+            <div class="widget-card p-5 h-full flex flex-col relative">
+                <div class="flex items-center gap-1.5 mb-2 shrink-0">
+                    <h3 class="text-[13px] font-bold text-slate-800 leading-none">Zella score</h3>
+                    <div class="relative flex items-center">
+                        <button onclick="toggleMenu('help-menu-score', event)" class="focus:outline-none flex items-center">
+                            <i class="fa-regular fa-circle-question text-slate-400 text-[11px] cursor-pointer hover:text-slate-600 transition pointer-events-none"></i>
+                        </button>
+                        <div id="help-menu-score" class="hidden absolute left-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 fade-in overflow-hidden">
+                            <div class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Score Guide</div>
+                            <div class="p-3 space-y-2 text-[11px] text-slate-600 leading-relaxed">
+                                <p>The <strong>Journey Score</strong> evaluates your overall trading performance on a scale of 0-100.</p>
+                                <p>It calculates a weighted average of your <strong>Win %</strong>, <strong>Profit factor</strong>, <strong>Avg win/loss</strong>, <strong>Recovery factor</strong>, <strong>Max drawdown</strong>, and <strong>Consistency</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative w-full flex-1 flex items-center justify-center -mt-3 overflow-hidden bg-transparent">
+                    <canvas id="journeyChart" class="h-full w-full"></canvas>
+                </div>
+
+                <div class="flex items-end justify-between mt-3 shrink-0">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-semibold text-slate-500 mb-0.5 uppercase tracking-wide">Your Zella Score</span>
+                        <span id="scoreDisplay" class="text-2xl font-bold text-slate-800 leading-none">77.55</span>
+                    </div>
+                    <div class="w-[55%] flex flex-col mb-1.5">
+                        <div class="h-1.5 w-full rounded-full bg-gradient-to-r from-[#ef4444] via-[#facc15] to-[#22c55e] relative">
+                            <div id="scoreMarker" class="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-slate-300 rounded-full shadow-sm transition-all duration-1000 ease-out" style="left: 77.55%;"></div>
+                        </div>
+                        <div class="flex justify-between text-[9px] font-bold text-slate-400 mt-2 px-0.5">
+                            <span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="widget-card p-5 flex flex-col h-full">
+                <div class="flex items-center gap-1.5 text-[13px] font-bold text-slate-800 mb-4 shrink-0">
+                    Daily net cumulative P&L <i class="fa-solid fa-circle-info text-[11px] text-slate-400 cursor-pointer"></i>
+                </div>
+                <div class="relative flex-1 w-full min-h-0">
+                    <canvas id="cumulativeLineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="widget-card p-5 flex flex-col h-full">
+                <div class="flex items-center gap-1.5 text-[13px] font-bold text-slate-800 mb-4 shrink-0">
+                    Net daily P&L <i class="fa-solid fa-circle-info text-[11px] text-slate-400 cursor-pointer"></i>
+                </div>
+                <div class="relative flex-1 w-full min-h-0">
+                    <canvas id="dailyBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-5 shrink-0 h-[450px]">
+            
+            <div class="col-span-3 widget-card p-0 overflow-hidden flex flex-col">
+                <div class="flex gap-4 px-5 pt-4 border-b border-slate-100 shrink-0">
+                    <button class="text-[13px] font-bold text-indigo-600 border-b-2 border-indigo-600 pb-2">Recent trades</button>
+                    <button class="text-[13px] font-bold text-slate-400 hover:text-slate-600 pb-2 transition">Open positions</button>
+                </div>
+                <div class="flex-1 overflow-y-auto w-full bg-white">
+                    <table class="w-full text-left text-xs whitespace-nowrap">
+                        <thead class="text-[10px] font-bold uppercase text-slate-400 sticky top-0 bg-white border-b border-slate-100 z-10">
+                            <tr>
+                                <th class="py-3 px-5">Close Date</th>
+                                <th class="py-3 px-2 text-center">Symbol</th>
+                                <th class="py-3 px-5 text-right">Net P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            <tr class="hover:bg-slate-50"><td class="py-3 px-5 font-medium text-slate-600">03/06/2026</td><td class="py-3 px-2 text-center font-bold text-slate-800">NQ</td><td class="py-3 px-5 text-right font-bold text-[#10b981]">$41.5</td></tr>
+                            <tr class="hover:bg-slate-50"><td class="py-3 px-5 font-medium text-slate-600">03/06/2026</td><td class="py-3 px-2 text-center font-bold text-slate-800">NQ</td><td class="py-3 px-5 text-right font-bold text-[#10b981]">$53</td></tr>
+                            <tr class="hover:bg-slate-50"><td class="py-3 px-5 font-medium text-slate-600">03/06/2026</td><td class="py-3 px-2 text-center font-bold text-slate-800">NQ</td><td class="py-3 px-5 text-right font-bold text-[#10b981]">$806</td></tr>
+                            <tr class="hover:bg-slate-50"><td class="py-3 px-5 font-medium text-slate-600">03/06/2026</td><td class="py-3 px-2 text-center font-bold text-slate-800">NQ</td><td class="py-3 px-5 text-right font-bold text-[#10b981]">$726</td></tr>
+                            <tr class="hover:bg-slate-50"><td class="py-3 px-5 font-medium text-slate-600">03/05/2026</td><td class="py-3 px-2 text-center font-bold text-slate-800">NQ</td><td class="py-3 px-5 text-right font-bold text-[#ef4444]">-$142</td></tr>
+                            <tr class="hover:bg-slate-50"><td class="py-3 px-5 font-medium text-slate-600">03/05/2026</td><td class="py-3 px-2 text-center font-bold text-slate-800">NQ</td><td class="py-3 px-5 text-right font-bold text-[#10b981]">$1,200</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-span-9 widget-card p-6 flex flex-col h-full">
+                <div class="flex justify-between items-center mb-4 shrink-0">
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-3 text-slate-400">
+                            <button onclick="changeMonth(-1)" class="hover:text-slate-700 transition p-1"><i class="fa-solid fa-chevron-left text-[11px]"></i></button>
+                            <h2 id="calendar-title" class="text-[15px] font-bold text-slate-800 w-28 text-center">March 2026</h2>
+                            <button onclick="changeMonth(1)" class="hover:text-slate-700 transition p-1"><i class="fa-solid fa-chevron-right text-[11px]"></i></button>
+                        </div>
+                        <button onclick="goToToday()" class="border border-slate-200 text-slate-600 text-[11px] font-bold px-3 py-1.5 rounded-md hover:bg-slate-50 transition">This month</button>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 text-slate-400">
+                        <div class="flex items-center gap-2 mr-2">
+                            <span class="text-slate-800 text-[12px] font-bold">Monthly stats:</span>
+                            <span id="monthly-pnl" class="px-2 py-0.5 rounded text-white bg-[#10b981] font-bold text-[11px]"></span>
+                            <span id="monthly-days" class="px-2 py-0.5 rounded text-indigo-600 bg-indigo-50 font-bold text-[11px]"></span>
+                        </div>
+                        <i class="fa-solid fa-gear hover:text-slate-700 cursor-pointer transition"></i>
+                        <i class="fa-regular fa-clock hover:text-slate-700 cursor-pointer transition"></i>
+                        <i class="fa-regular fa-circle-question hover:text-slate-700 cursor-pointer transition"></i>
+                    </div>
+                </div>
+
+                <div class="w-full flex flex-col flex-1 min-h-0">
+                    <div class="grid grid-cols-8 gap-2 mb-2 shrink-0">
+                        <div class="flex items-center justify-center text-[11px] font-bold text-slate-500 py-1.5 border border-slate-200 rounded-lg bg-white">Sun</div>
+                        <div class="flex items-center justify-center text-[11px] font-bold text-slate-500 py-1.5 border border-slate-200 rounded-lg bg-white">Mon</div>
+                        <div class="flex items-center justify-center text-[11px] font-bold text-slate-500 py-1.5 border border-slate-200 rounded-lg bg-white">Tue</div>
+                        <div class="flex items-center justify-center text-[11px] font-bold text-slate-500 py-1.5 border border-slate-200 rounded-lg bg-white">Wed</div>
+                        <div class="flex items-center justify-center text-[11px] font-bold text-slate-500 py-1.5 border border-slate-200 rounded-lg bg-white">Thu</div>
+                        <div class="flex items-center justify-center text-[11px] font-bold text-slate-500 py-1.5 border border-slate-200 rounded-lg bg-white">Fri</div>
+                        <div class="flex items-center justify-center text-[11px] font-bold text-slate-500 py-1.5 border border-slate-200 rounded-lg bg-white">Sat</div>
+                        <div></div> 
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-8 gap-2 flex-1 min-h-0"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --------------------------------------------------------
+        // 1. TOP WIDGET GAUGES (Chart.js Doughnuts)
+        // --------------------------------------------------------
+        const gaugeOptions = {
+            responsive: true, maintainAspectRatio: false,
+            cutout: '85%', circumference: 180, rotation: 270,
+            plugins: { tooltip: { enabled: false } },
+            layout: { padding: 0 }
+        };
+
+        // Win Pct
+        new Chart(document.getElementById('gaugeWinPct').getContext('2d'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: [74.58, 25.42], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0, borderRadius: 2 }] },
+            options: gaugeOptions
+        });
+
+        // Day Win Pct
+        new Chart(document.getElementById('gaugeDayWin').getContext('2d'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: [100, 0], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0, borderRadius: 2 }] },
+            options: gaugeOptions
+        });
+
+        // Profit Factor (Full Circle)
+        new Chart(document.getElementById('gaugeProfitFactor').getContext('2d'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: [2.19, 1], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0, borderRadius: 2 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '80%', plugins: { tooltip: { enabled: false } }
+            }
+        });
+
+
+        // --------------------------------------------------------
+        // 2. YOUR EXACT JOURNEY SCORE RADAR CHART
+        // --------------------------------------------------------
+        function toggleMenu(menuId, event) {
+            const menu = document.getElementById(menuId);
+            if(menu) menu.classList.toggle('hidden');
+            if (event) event.stopPropagation();
+        }
+
+        document.addEventListener('click', function(event) {
+            const isClickInsideMenu = event.target.closest('.relative');
+            if (!isClickInsideMenu) {
+                const helpMenu = document.getElementById('help-menu-score');
+                if(helpMenu) helpMenu.classList.add('hidden');
+            }
+        });
+
+        const ctxRadar = document.getElementById('journeyChart').getContext('2d');
+        const purpleGradient = ctxRadar.createLinearGradient(0, 0, 0, 250);
+        purpleGradient.addColorStop(0, 'rgba(139, 92, 246, 0.55)'); 
+        purpleGradient.addColorStop(1, 'rgba(139, 92, 246, 0.05)'); 
+
+        new Chart(ctxRadar, {
+            type: 'radar',
+            data: {
+                labels: ['Win %', 'Profit factor', 'Avg win/loss', 'Recovery factor', 'Max drawdown', 'Consistency'],
+                datasets: [{
+                    data: [75, 60, 55, 70, 85, 90],
+                    backgroundColor: purpleGradient, 
+                    borderColor: 'rgb(139, 92, 246)', 
+                    pointBackgroundColor: '#ffffff', 
+                    pointBorderColor: 'rgb(139, 92, 246)', 
+                    pointHoverBackgroundColor: '#ffffff',
+                    pointHoverBorderColor: 'rgb(139, 92, 246)',
+                    borderWidth: 1.5, pointRadius: 2, pointHoverRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    r: {
+                        angleLines: { display: true, color: 'rgba(226, 232, 240, 0.9)', lineWidth: 1 },
+                        grid: { color: 'rgba(226, 232, 240, 0.9)', lineWidth: 1 },
+                        pointLabels: { color: '#64748b', font: { family: 'Inter', size: 10, weight: '600' }, padding: 15 },
+                        ticks: { display: false, min: 0, max: 100, stepSize: 20 }
+                    }
+                }
+            }
+        });
+
+
+        // --------------------------------------------------------
+        // 3. IMAGE 2 STYLE CHARTS (Gradient Fill & Colored Bars)
+        // --------------------------------------------------------
+        
+        // Mock Chart Data containing positive and negative swings
+        const chartLabels = ['02/25', '02/27', '03/01', '03/03', '03/05', '03/06'];
+        const lineData = [-1500, -200, 1800, 800, 3000, 4800]; // Dips below zero then rises
+        const barData = [1400, -800, 700, -1200, 2300, 1000]; // Positive and negative bars
+
+        // --- CUMULATIVE LINE CHART (Targeting Origin) ---
+        const ctxLine = document.getElementById('cumulativeLineChart').getContext('2d');
+        
+        new Chart(ctxLine, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: lineData,
+                    borderColor: '#10b981', // Base color
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    fill: {
+                        target: 'origin',
+                        above: 'rgba(16, 185, 129, 0.25)', // Light Green above 0
+                        below: 'rgba(239, 68, 68, 0.25)'   // Light Red below 0
+                    },
+                    segment: {
+                        borderColor: ctx => ctx.p0.parsed.y < 0 && ctx.p1.parsed.y < 0 ? '#ef4444' : '#10b981'
+                    }
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                    y: { 
+                        grid: { color: '#f1f5f9', drawBorder: false }, 
+                        ticks: { color: '#94a3b8', font: { size: 10 }, callback: value => '$' + value } 
+                    }
+                }
+            }
+        });
+
+        // --- NET DAILY BAR CHART (Colored Bars) ---
+        const ctxBar = document.getElementById('dailyBarChart').getContext('2d');
+        const barColors = barData.map(val => val >= 0 ? '#10b981' : '#ef4444');
+
+        new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: barData,
+                    backgroundColor: barColors,
+                    borderRadius: 2,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                    y: { 
+                        grid: { color: '#f1f5f9', drawBorder: false }, 
+                        ticks: { color: '#94a3b8', font: { size: 10 }, callback: value => '$' + value } 
+                    }
+                }
+            }
+        });
+
+
+        // --------------------------------------------------------
+        // 4. YOUR EXACT FUNCTIONAL CALENDAR LOGIC
+        // --------------------------------------------------------
+        const mockCalData = {
+            '2026-3-2': { net: 720, trades: 3, winRate: '100.0%' },
+            '2026-3-3': { net: 834, trades: 9, winRate: '66.67%' },
+            '2026-3-4': { net: 2350, trades: 14, winRate: '71.43%' },
+            '2026-3-5': { net: 2080, trades: 6, winRate: '100.0%' },
+            '2026-3-6': { net: 1030, trades: 12, winRate: '75.0%' },
+            '2026-3-12': { net: -1200, trades: 4, winRate: '25.0%' }, // Added a red day for visual
+        };
+
+        const todayDate = new Date(2026, 2, 6); // Mocked to March 2026 for screenshot accuracy
+        let currentMonth = todayDate.getMonth(); 
+        let currentYear = todayDate.getFullYear();
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        function formatTotal(num) {
+            return (num < 0 ? '-' : '') + '$' + Math.abs(num).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        }
+
+        function renderCalendar() {
+            const title = document.getElementById('calendar-title');
+            const grid = document.getElementById('calendar-grid');
+            title.innerText = `${monthNames[currentMonth]} ${currentYear}`;
+            grid.innerHTML = '';
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            let currentWeekNet = 0; let currentWeekDaysTraded = 0;
+            let weekNumber = 1; let currentDayOfWeek = 0;
+            let monthlyNet = 0; let monthlyDaysTraded = 0;
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div class="h-full min-h-[50px] bg-transparent"></div>`;
+                currentDayOfWeek++;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateKey = `${currentYear}-${currentMonth + 1}-${day}`;
+                const data = mockCalData[dateKey];
+
+                if (data) {
+                    currentWeekNet += data.net; currentWeekDaysTraded++;
+                    monthlyNet += data.net; monthlyDaysTraded++;
+                    
+                    // Darker green styling matching your screenshot
+                    let bgClass = data.net >= 0 ? 'bg-[#d1fae5] border-2 border-[#10b981]' : 'bg-[#fee2e2] border-2 border-[#ef4444]';
+                    let textClass = data.net >= 0 ? 'text-[#047857]' : 'text-[#b91c1c]';
+                    
+                    grid.innerHTML += `
+                    <div class="h-full min-h-[50px] rounded-lg ${bgClass} relative flex flex-col justify-center items-center cursor-pointer hover:shadow-md transition">
+                        <span class="absolute top-1 right-2 text-[10px] font-bold text-slate-500">${day}</span>
+                        <div class="mt-2 flex flex-col items-center">
+                            <span class="font-bold text-[13px] ${textClass}">${data.net >= 0 ? '$' : '-$'}${Math.abs(data.net)}</span>
+                            <span class="text-[9px] font-medium ${textClass} opacity-80">${data.trades} trades</span>
+                            <span class="text-[8px] font-medium ${textClass} opacity-80">${data.winRate}</span>
+                        </div>
+                    </div>`;
+                } else {
+                    grid.innerHTML += `<div class="h-full min-h-[50px] rounded-lg border border-slate-200 relative bg-[#f8fafc]"><span class="absolute top-1 right-2 text-[10px] font-semibold text-slate-400">${day}</span></div>`;
+                }
+                currentDayOfWeek++;
+
+                if (currentDayOfWeek === 7) {
+                    let sumColor = currentWeekNet >= 0 ? (currentWeekNet === 0 ? 'text-slate-700' : 'text-[#10b981]') : 'text-[#ef4444]';
+                    grid.innerHTML += `
+                    <div class="h-full min-h-[50px] rounded-lg border border-slate-200 bg-transparent flex flex-col justify-center items-center">
+                        <span class="text-[9px] font-bold text-slate-400 mb-0.5">Week ${weekNumber}</span>
+                        <span class="text-[12px] font-bold ${sumColor}">${formatTotal(currentWeekNet)}</span>
+                        <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded font-bold text-[8px] mt-0.5">${currentWeekDaysTraded} days</span>
+                    </div>`;
+                    currentWeekNet = 0; currentWeekDaysTraded = 0; currentDayOfWeek = 0; weekNumber++;
+                }
+            }
+
+            if (currentDayOfWeek > 0) {
+                let emptyDaysNeeded = 7 - currentDayOfWeek;
+                for (let i = 0; i < emptyDaysNeeded; i++) grid.innerHTML += `<div class="h-full min-h-[50px] bg-transparent"></div>`;
+                let sumColor = currentWeekNet >= 0 ? (currentWeekNet === 0 ? 'text-slate-700' : 'text-[#10b981]') : 'text-[#ef4444]';
+                grid.innerHTML += `
+                <div class="h-full min-h-[50px] rounded-lg border border-slate-200 bg-transparent flex flex-col justify-center items-center">
+                    <span class="text-[9px] font-bold text-slate-400 mb-0.5">Week ${weekNumber}</span>
+                    <span class="text-[12px] font-bold ${sumColor}">${formatTotal(currentWeekNet)}</span>
+                    <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded font-bold text-[8px] mt-0.5">${currentWeekDaysTraded} days</span>
+                </div>`;
+            }
+            
+            document.getElementById('monthly-pnl').innerText = formatTotal(monthlyNet);
+            document.getElementById('monthly-days').innerText = `${monthlyDaysTraded} days`;
+        }
+
+        window.changeMonth = function(dir) {
+            currentMonth += dir;
+            if (currentMonth < 0) { currentMonth = 11; currentYear--; } 
+            else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            renderCalendar();
+        };
+
+        window.goToToday = function() {
+            currentMonth = todayDate.getMonth();
+            currentYear = todayDate.getFullYear();
+            renderCalendar();
+        };
+
+        renderCalendar();
+    </script>
+</body>
+</html>
